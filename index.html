@@ -1,0 +1,192 @@
+<html>
+  <head>
+    <title>碳循环计算器</title>
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+
+      #form {
+        width: 480px;
+        margin: 0 auto;
+        margin-bottom: 20px;
+      }
+
+      .row {
+        margin: 5px 0;
+      }
+
+      .row label {
+        display: inline-block;
+        min-width: 150px;
+      }
+
+      #submit {
+        margin-top: 40px;
+      }
+
+      #output {
+        width: 480px;
+        margin: 0 auto;
+        line-height: 1.5;
+      }
+
+      .info-title, .info-value {
+        display: inline-block;
+      }
+
+      .info-title {
+        min-width: 10em;
+      }
+
+      .info-value {
+        min-width: 5em;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="form">
+      <div class="row">
+        <label for="height">身高（cm）</label><input id="height" type="number" value="170">
+      </div>
+      <div class="row">
+        <label for="weight">体重（kg）</label><input id="weight" type="number" value="70">
+      </div>
+      <div class="row">
+        <label for="age">年龄</label><input id="age" type="number" value="25">
+      </div>
+      <div class="row">
+        <label for="sex">女性</label><input id="sex" type="checkbox" checked>
+      </div>
+      <div class="row">
+        <label for="gap">预期热量缺口</label><input id="gap" type="number" value="400">
+      </div>
+      <div class="row">
+        <button id="submit">提交</button>
+      </div>
+    </div>
+    <div id="output"></div>
+    <script>
+      window.addEventListener('load', function () {
+        const $weight = qs('#weight')
+        const $height = qs('#height')
+        const $age = qs('#age')
+        const $sex = qs('#sex')
+        const $gap = qs('#gap')
+        const $output = qs('#output')
+
+        qs('#submit').addEventListener('click', function () {
+          const weight = $weight.value
+          const height = $height.value
+          const age = $age.value
+          const sex = $sex.value
+          const gap = $gap.value
+          // need for every kg
+          const protein = sex ? 2 : 3
+
+          const kcalMap = {
+            carbon: 4,
+            protein: 4,
+            fat: 9
+          }
+
+          let res
+
+          if (sex) {
+            res = 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age)
+          } else {
+            res = 66 + (13.7 * weight) + (5 * height) - (6.8 * age)
+          }
+
+          const consume = res * 1.55
+
+          const intake = consume - gap - 200 /* 蔬菜 */
+
+          const highStr = 2
+          const lowStr = 1.8
+          const lowCarbon = 1
+          const highCarbon = 3
+          // 低碳日碳水 g
+          const lowDayCarbon = weight * lowCarbon
+          // 高碳日碳水 g
+          const highDayCarbon = weight * highCarbon
+          // 低强度蛋白质 g
+          const lowStrDayProtein = weight * lowStr
+          // 高强度蛋白质 g
+          const highStrDayProtein = weight * highStr
+          // 低强度低碳日脂肪 g
+          const lowDayLowStrFat = (intake - lowDayCarbon * kcalMap.carbon - lowStrDayProtein * kcalMap.protein) / kcalMap.fat
+          // 低强度高碳日脂肪 g
+          const lowDayHighStrFat = (intake - highDayCarbon * kcalMap.carbon - lowStrDayProtein * kcalMap.protein) / kcalMap.fat
+          // 高强度低碳日脂肪 g
+          const highDayLowStrFat = (intake - lowDayCarbon * kcalMap.carbon - highStrDayProtein * kcalMap.protein) / kcalMap.fat
+          // 高强度高碳日脂肪 g
+          const highDayHighStrFat = (intake - highDayCarbon * kcalMap.carbon - highStrDayProtein * kcalMap.protein) / kcalMap.fat
+
+          $output.innerHTML = `
+            <div class="info-row">
+              <div class="info-title">每日消耗热量</div>  
+              <div class="info-value">${fixNumber(consume)}kcal</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">每日摄入热量</div>  
+              <div class="info-value">${fixNumber(intake)}kcal</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">低强度蛋白摄入</div>  
+              <div class="info-value">${fixNumber(lowStrDayProtein * kcalMap.protein)}kcal</div> 
+              <div class="info-value">${fixNumber(lowStrDayProtein)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">高强度蛋白摄入</div>  
+              <div class="info-value">${fixNumber(highStrDayProtein * kcalMap.protein)}kcal</div> 
+              <div class="info-value">${fixNumber(highStrDayProtein)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">低碳日碳水摄入</div>  
+              <div class="info-value">${fixNumber(lowDayCarbon * kcalMap.carbon)}kcal</div> 
+              <div class="info-value">${fixNumber(lowDayCarbon)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">高碳日碳水摄入</div>  
+              <div class="info-value">${fixNumber(highDayCarbon * kcalMap.carbon)}kcal</div> 
+              <div class="info-value">${fixNumber(highDayCarbon)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">低强度低碳日脂肪摄入</div>  
+              <div class="info-value">${fixNumber(lowDayLowStrFat * kcalMap.fat)}kcal</div> 
+              <div class="info-value">${fixNumber(lowDayLowStrFat)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">低强度高碳日脂肪摄入</div>  
+              <div class="info-value">${fixNumber(lowDayHighStrFat * kcalMap.fat)}kcal</div> 
+              <div class="info-value">${fixNumber(lowDayHighStrFat)}g</div> 
+            </div>
+            <div class="info-row">
+              <div class="info-title">高强度低碳日脂肪摄入</div>  
+              <div class="info-value">${fixNumber(highDayLowStrFat * kcalMap.fat)}kcal</div> 
+              <div class="info-value">${fixNumber(highDayLowStrFat)}g</div>
+            </div>
+            <div class="info-row">
+              <div class="info-title">高强度高碳日脂肪摄入</div>  
+              <div class="info-value">${fixNumber(highDayHighStrFat * kcalMap.fat)}kcal</div> 
+              <div class="info-value">${fixNumber(highDayHighStrFat)}g</div> 
+            </div>
+          `
+        })
+      })
+
+      /**
+       * @param {string} selector
+       */
+      function qs (selector) {
+        return document.querySelector(selector)
+      }
+
+      function fixNumber (num) {
+        return Number(num).toFixed(0)
+      }
+    </script>
+  </body>
+</html>
